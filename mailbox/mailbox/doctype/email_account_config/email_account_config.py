@@ -109,7 +109,7 @@ class EmailAccountConfig(Document):
 			"email_account": self.name,
 			"user":self.user,
 			"recipient": email.mail.get("To"),
-			"cc":email.mail.get("Cc")
+			"cc":email.mail.get("Cc"),
 			"date_time":date
 		})
 
