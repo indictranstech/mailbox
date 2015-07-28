@@ -6,7 +6,7 @@ from __future__ import unicode_literals
 import frappe
 from frappe.model.document import Document
 from email.utils import formataddr, parseaddr
-from frappe.utils import get_url, get_formatted_email, cstr, cint
+from frappe.utils import get_site_path, get_hook_method, get_files_path, random_string, encode, cstr,validate_email_add
 from frappe.utils.file_manager import get_file
 import frappe.email.smtp
 from frappe import _
@@ -15,7 +15,8 @@ import mailbox
 
 class Mailbox(Document):
 	def on_update(self):
-		self.attach_mail_to_customer_or_supplier()
+		#self.attach_mail_to_customer_or_supplier()
+		pass
 
 	def attach_mail_to_customer_or_supplier(self):
 		"""
@@ -43,7 +44,7 @@ class Mailbox(Document):
 		"""Create contact of sender against supplier/customer"""
 		contact = frappe.get_doc({
 			"doctype":"Contact",
-			"first_name": self.sender_full_name,
+			"first_name": self.sender_full_name or "test4",
 			"email_id": self.sender,
 		})
 
@@ -67,16 +68,16 @@ class Mailbox(Document):
 			cobj = frappe.get_doc('Contact',contact_name)
 			
 			if cobj.customer:
-				self.append_mail_to_doc("Customer",cobj.customer,"Received")
+				self.append_mail_to_doc("Customer",cobj.customer)
 				self.customer = cobj.customer
 				self.tagged = 1
 
 			elif cobj.supplier:
-				self.append_mail_to_doc("Supplier",cobj.supplier,"Received")
+				self.append_mail_to_doc("Supplier",cobj.supplier)
 				self.supplier = cobj.supplier
 				self.tagged = 1
 
-	def append_mail_to_doc(self,doctype,docname,action):
+	def append_mail_to_doc(self,doctype,docname):
 		"""Create communication doc so that these mail can be seen as comment in customer/supplier"""
 
 		related_content = """From: %(sender)s <br> To: %(recipients)s <br> Subject: %(subject)s <br> tag: %(tag)s"""%{
@@ -93,7 +94,7 @@ class Mailbox(Document):
 			"content":related_content,
 			"sender": self.sender,
 			"communication_medium": "Email",
-			"sent_or_received": action,
+			"sent_or_received": "Received",
 			"reference_doctype":doctype,
 			"reference_name": docname
 		})
@@ -102,67 +103,140 @@ class Mailbox(Document):
 @frappe.whitelist()
 def make(doctype=None, name=None, content=None, subject=None, sent_or_received = "Sent",
 	sender=None, recipients=None, communication_medium="Email", send_email=False,
-	print_html=None, print_format=None, attachments='[]', ignore_doctype_permissions=False,
-	send_me_a_copy=False,email_account=None,doc=None,forward_or_reply=None):
-
-
-	if not sender and frappe.session.user != "Administrator":
-		sender = frappe.db.get_value("Email Config",{"name":email_account},"email_id")
+	attachments='[]',email_account=None,doc=None,action=None,cc=None,bcc=None,form_values=None):
+	"""
+		called from composer
+		These Method manages craeting new mailbox document for reply/Forwarded and compose
+		calls respective Methods
+	"""
 	import json	
 	doc = json.loads(doc)
-	
-	comm = frappe.get_doc({
-		"doctype":"Mailbox",
-		"subject": subject,
-		"content": content,
-		"tag": doc.get('tag') or "",
-		"customer": doc.get("customer") or "",
-		"supplier": doc.get("supplier") or "",
-		"sender": sender,
-		"recipients": recipients,
-	})
-	comm.insert(ignore_permissions=True)
+	mailbox_doc = {
+		"doctype":doctype,
+		"name":name,
+		"content":content,
+		"subject":subject,
+		"sender":sender,
+		"recipients":recipients,
+		"attachments":attachments,
+		"email_account":email_account,
+		"doc":doc,
+		"action":action,
+		"cc":cc,
+		"bcc":bcc,
+		"form_values":form_values
+	}
 
-	#attachments = get_attachments(doctype,name)
-	attachments = prepare_attachments(attachments)
+	return_dic = {}
+	if not validated_email_addrs(mailbox_doc,return_dic):
+		return return_dic
+
+	# add frappe.session.user != "Administrator" to condition
+	if action and action != 'compose': 
+		mailbox_doc["sender"] = frappe.db.get_value("Email  Account Config",
+			{"name":email_account},"email_id")
+
+	if mailbox_doc['action'] == 'compose':
+		attachments = get_attachments(ref_no)
+	else:
+		attachments = prepare_attachments(attachments)
+
+	mailbox = append_to_mailbox(mailbox_doc)
+	added_attachments = add_attachments(attachments,mailbox.name)
+	recipients = send_mail(mailbox_doc,attachments)
+
+def validated_email_addrs(mailbox_doc,return_dic):
+	if not single_recipient(mailbox_doc):
+		return_dic.update({"not_valid":"Only One recipient Allowed in 'To'"})
+		return False
+	
+	if not validate_email_add(mailbox_doc['recipients']):
+		return_dic.update({"not_valid":"Not Valid Email Id in To"})
+		return False
+
+	if not validate_cc_and_bcc(mailbox_doc,return_dic):
+		return False
+
+	else:
+		return True	
+		
+def validate_cc_and_bcc(mailbox_doc,return_dic):
+	for recipients in [get_recipients(mailbox_doc['cc']),get_recipients(mailbox_doc['bcc'])]:
+		for recipient in recipients:
+			if not validate_email_add(recipient):
+				return_dic.update({"not_valid":"'%s' not valid Email Address"%recipient})
+				return False
+	return True		
+
+def single_recipient(mailbox_doc):
+	recipients = len(mailbox_doc["recipients"].split(','))
+	if recipients > 1:
+		return False
+	return True
+
+
+def send_mail(mailbox_doc,attachments):
+	if mailbox_doc["action"] == 'compose':
+		attachments = [attachment["file_name"] for attachment in attachments]
+		attachments = prepare_attachments(attachments)
+
+	recipients = get_recipients(mailbox_doc["recipients"])
+	cc = get_recipients(mailbox_doc["cc"])
+	bcc = get_recipients(mailbox_doc["bcc"])
+
+	mailbox.sendmail(
+		recipients=recipients,
+		sender=mailbox_doc["sender"],
+		subject=mailbox_doc["subject"],
+		content=mailbox_doc["content"],
+		attachments=attachments,
+		cc=cc,
+		bcc=bcc
+	)
+
+
+def append_to_mailbox(mailbox_doc):
+	action_mapper = {"compose":"Outgoing","reply":"Replied","forward":"Forwarded"}
+
+	mailbox = frappe.get_doc({
+		"doctype":"Mailbox",
+		"subject": mailbox_doc["subject"],
+		"content": mailbox_doc["content"],
+		"tag": mailbox_doc["doc"].get('tag') or "",
+		"customer": mailbox_doc["doc"].get("customer") or "",
+		"supplier": mailbox_doc["doc"].get("supplier") or "",
+		"sender": mailbox_doc["sender"],
+		"recipient": mailbox_doc["recipients"],
+		"cc":mailbox_doc["cc"],
+		"cc":mailbox_doc["bcc"],
+		"action":action_mapper.get(mailbox_doc["action"])
+	})
+	mailbox.insert(ignore_permissions=True)
+	 
+	return mailbox
+
+
+def add_attachments(attachments,mailbox_doc):
 	for attachment in attachments:
 		file_data = {}
-		furl = "/files/%s"%attachment["fname"] 
+		furl = "/files/%s"%attachment["file_name"]
 		file_data.update({
 			"doctype": "File Data",
 			"attached_to_doctype":"Outbox",
 			"attached_to_name":comm.name,
 			"file_url":furl,
-			"file_name":attachment["fname"]
+			"file_name":attachment["file_name"]
 			
 		})
 		f = frappe.get_doc(file_data)
 		f.flags.ignore_permissions = True
 		f.insert();
+	return True
 
-	recipients = get_recipients(recipients)
-	attachments = prepare_attachments(attachments)
-	
-	mailbox.sendmail(
-		recipients=recipients,
-		sender=sender,
-		subject=subject,
-		content=content,
-		attachments=attachments,
-	)
-
-	doc = frappe.get_doc("Inbox",name)
-	if forward_or_reply == 'reply':
-		doc.tag = 'Responded'
-	elif forward_or_reply == 'forward':
-		doc.tag = 'Forwarded to Other User'	
-	doc.save(ignore_permissions=True)
-
-	return {
-		"name": comm.name,
-		"recipients": ", ".join(recipients) if recipients else None
-
-	}
+@frappe.whitelist()
+def get_attachments(ref_no):
+	return frappe.get_all("Compose", fields=["file_name"],
+		filters = {"ref_no": ref_no})
 
 def get_recipients(recipients):
 	original_recipients = [s.strip() for s in cstr(recipients).split(",")]
@@ -173,15 +247,14 @@ def get_recipients(recipients):
 		if e not in filtered and email_id not in filtered:
 				filtered.append(e)
 	return filtered
-	
+
+
 def prepare_attachments(g_attachments=None):
 	attachments = []
 	if g_attachments:
-		
 		if isinstance(g_attachments, basestring):
 			import json
 			g_attachments = json.loads(g_attachments)
-
 		for a in g_attachments:
 			if isinstance(a, basestring):
 				# is it a filename?
@@ -192,8 +265,8 @@ def prepare_attachments(g_attachments=None):
 					frappe.throw(_("Unable to find attachment {0}").format(a))
 			else:
 				attachments.append(a)
+	return attachments
 
-	return attachments				
 
 @frappe.whitelist()
 def get_tagging_details(supplier_or_customer,sender):
@@ -206,8 +279,8 @@ def get_tagging_details(supplier_or_customer,sender):
 
 @frappe.whitelist()
 def sync_for_current_user():
-	for email_account in frappe.get_list("Email Config", filters={"enabled": 1,"user":frappe.session.user}):
-		email_config = frappe.get_doc('Email Config',email_account)
+	for email_account in frappe.get_list("Email Account Config", filters={"enabled": 1,"user":frappe.session.user}):
+		email_config = frappe.get_doc('Email Account Config',email_account)
 		email_config.receive()
 
 @frappe.whitelist()
@@ -231,4 +304,25 @@ def check_tagging_status():
 	if recipients:
 		frappe.sendmail(recipients=recipients,
 					subject="Tagging Reminder",
-					message="""Its over five days Incoming Message Not tagged""")					
+					message="""Its over five days Incoming Message Not tagged""")
+
+@frappe.whitelist()
+def check_contact(contact=None):
+	if contact:
+		if not frappe.db.get_value("Contact",{"email_id":contact},"name"):
+			return "Create a new Vendor/Customer"
+
+@frappe.whitelist()
+def trash_items():
+	"""trash selected items from listview"""
+	import json
+
+	il = json.loads(frappe.form_dict.get('items'))
+
+	for d in il:
+		mailbox = frappe.get_doc("Mailbox",d)
+		mailbox.update({
+			"previous_action":mailbox.action,
+			"action":"Trash"
+		})
+		mailbox.save()
