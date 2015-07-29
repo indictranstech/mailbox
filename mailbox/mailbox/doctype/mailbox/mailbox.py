@@ -25,7 +25,8 @@ class Mailbox(Document):
 			self.update_tag_info()
 
 		if self.action == 'Trash' and self.communication:
-			frappe.delete_doc("Communication",self.communication)  
+			if frappe.db.get_value("Communication",self.communication):
+				frappe.delete_doc("Communication",self.communication)  
 
 
 	def update_tag_info(self):
