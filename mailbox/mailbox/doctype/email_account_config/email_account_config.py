@@ -13,6 +13,10 @@ from frappe import _
 import datetime
 from frappe.celery_app import get_celery, celery_task, task_logger, LONGJOBS_PREFIX
 from frappe.utils import get_sites
+from frappe.email.email_body import get_email
+from frappe.email.smtp import SMTPServer
+import smtplib
+from frappe import _
 
 
 class EmailAccountConfig(Document):
@@ -26,6 +30,7 @@ class EmailAccountConfig(Document):
 		"""
 		if self.email_id:
 			validate_email_add(self.email_id, True)
+			self.valid_trufil_id(self.email_id)
 			self.validate_duplicate_emailid_config()
 
 		if self.enabled:
@@ -38,7 +43,11 @@ class EmailAccountConfig(Document):
 			{"email_id":self.email_id},"name")
 
 		if email_config and not email_config == self.name and cint(self.get("__islocal")):
-			frappe.throw(_("Configuration for {0} Already Exists.").format(self.email_id))		
+			frappe.throw(_("Configuration for {0} Already Exists.").format(self.email_id))
+
+	def self.valid_trufil_id(self):
+		if not re.search("^[a-z0-9]+[\.'\-a-z0-9_]*[a-z0-9]+@(trufil)\.com$", self.email_id):
+			frappe.throw(_("Email Address not of trufil mail server")			
 
 	def check_smtp(self):
 		#check SMTP server valid or not
@@ -137,4 +146,33 @@ def pull():
 	finally:
 		frappe.destroy()
 
+def sendmail(recipients, sender='', msg='', subject='[No Subject]', attachments=None, content=None,
+	reply_to=None, cc=(), message_id=None,bcc=()):
+	
+	"""send an html email as multipart with attachments and all"""
+	mail = get_email(recipients, sender, content or msg, subject, attachments=attachments, reply_to=reply_to, cc=cc)
+	if message_id:
+		mail.set_message_id(message_id)
+	send_mail(mail,sender)
+
+def send_mail(mail,sender):
+	if sender:
+		mail_config = frappe.db.get_value("Email Config",{"email_id":sender},"name")
+		server_details = frappe.get_doc("Email Config",mail_config)
 		
+		try:
+			smtpserver = SMTPServer(login=server_details.email_id, password=server_details.password, 
+				server=server_details.smtp_server, port=587, 
+				use_ssl=1, append_to=None)	
+			
+			mail.sender = smtpserver.login
+			
+			smtpserver.sess.sendmail(mail.sender, mail.recipients + (mail.cc or []),
+				mail.as_string())
+		
+		except smtplib.SMTPSenderRefused:
+			frappe.msgprint(_("Invalid login or password"))
+			raise
+		except smtplib.SMTPRecipientsRefused:
+			frappe.msgprint(_("Invalid recipient address"))
+			raise		

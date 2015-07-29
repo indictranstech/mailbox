@@ -11,7 +11,7 @@ from frappe.utils.file_manager import get_file
 import frappe.email.smtp
 from frappe import _
 from frappe.desk.form.load import get_attachments
-import mailbox
+from mailbox.mailbox.doctype.email_account_config.email_account_config import sendmail
 
 class Mailbox(Document):
 	def on_update(self):
@@ -25,14 +25,14 @@ class Mailbox(Document):
 			Check these contact exsits for which customer or supplier get that supplier or customer 
 			and attach mail in his comment section
 		"""
-		if self.customer and not cint(self.get("tagged")):
+		if self.customer and not cint(self.get("tagged")) and not self.action == 'Trash' and not self.action == 'Outgoing':
 			if not frappe.db.get_value('Contact',{"customer":self.customer,"email_id":self.sender},"name"):
 				self.create_contact(contact_for="Customer")
 			
 			self.append_mail_to_doc("Customer",self.customer)
 			self.tagged = 1
 
-		elif self.supplier and not cint(self.get("tagged")):
+		elif self.supplier and not cint(self.get("tagged")) and not self.action == 'Trash' and not self.action == 'Outgoing':
 			if not frappe.db.get_value('Contact',{"supplier":self.supplier,"email_id":self.sender},"name"):
 				self.create_contact(contact_for="supplier")
 
@@ -44,7 +44,7 @@ class Mailbox(Document):
 		"""Create contact of sender against supplier/customer"""
 		contact = frappe.get_doc({
 			"doctype":"Contact",
-			"first_name": self.sender_full_name or "test4",
+			"first_name": self.sender_full_name,
 			"email_id": self.sender,
 		})
 
@@ -103,7 +103,7 @@ class Mailbox(Document):
 @frappe.whitelist()
 def make(doctype=None, name=None, content=None, subject=None, sent_or_received = "Sent",
 	sender=None, recipients=None, communication_medium="Email", send_email=False,
-	attachments='[]',email_account=None,doc=None,action=None,cc=None,bcc=None,form_values=None):
+	attachments='[]',email_account=None,doc=None,action=None,cc=None,bcc=None,form_values=None,ref_no=None):
 	"""
 		called from composer
 		These Method manages craeting new mailbox document for reply/Forwarded and compose
@@ -127,7 +127,7 @@ def make(doctype=None, name=None, content=None, subject=None, sent_or_received =
 		"form_values":form_values
 	}
 
-	return_dic = {}
+	return_dic = {}	
 	if not validated_email_addrs(mailbox_doc,return_dic):
 		return return_dic
 
@@ -163,9 +163,10 @@ def validated_email_addrs(mailbox_doc,return_dic):
 def validate_cc_and_bcc(mailbox_doc,return_dic):
 	for recipients in [get_recipients(mailbox_doc['cc']),get_recipients(mailbox_doc['bcc'])]:
 		for recipient in recipients:
-			if not validate_email_add(recipient):
+			if recipient and not validate_email_add(recipient):
 				return_dic.update({"not_valid":"'%s' not valid Email Address"%recipient})
 				return False
+
 	return True		
 
 def single_recipient(mailbox_doc):
@@ -184,7 +185,7 @@ def send_mail(mailbox_doc,attachments):
 	cc = get_recipients(mailbox_doc["cc"])
 	bcc = get_recipients(mailbox_doc["bcc"])
 
-	mailbox.sendmail(
+	sendmail(
 		recipients=recipients,
 		sender=mailbox_doc["sender"],
 		subject=mailbox_doc["subject"],
@@ -326,3 +327,8 @@ def trash_items():
 			"action":"Trash"
 		})
 		mailbox.save()
+
+@frappe.whitelist()
+def get_emails():
+	return frappe.db.sql("""select email_id from `tabEmail Account Config`
+		where user='%s'"""%frappe.session.user,as_list=1)

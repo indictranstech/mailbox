@@ -11,7 +11,7 @@ mailbox.Composer = Class.extend({
 			title: __("Compose"),
 			no_submit_on_enter: true,
 			fields: [
-				{label:__("From"), fieldtype:"Data",fieldname:"sender","hidden":1},
+				{label:__("From"), fieldtype:"Select",fieldname:"sender","option":""},
 				{label:__("To"), fieldtype:"Data", reqd: 1, fieldname:"recipient"},
 				{label:__("Hide/Unhide"), fieldtype:"HTML",
 					fieldname:"hide"},
@@ -62,12 +62,29 @@ mailbox.Composer = Class.extend({
 		}
 		else if (this.action == 'compose'){
 			$(this.dialog.fields_dict.sender.input).attr('required',true)
+			this.setup_link()
 			this.attachments_for_compose();
 		}	
 		this.setup_autosuggest();
 		this.setup_hide_unhide();
 		$(this.dialog.fields_dict.recipient.input).val(this.recipient || "").change();
 		$(this.dialog.fields_dict.subject.input).val(this.subject || "").change();
+	},
+	setup_link:function(){
+		var me = this;
+		frappe.call({
+			method: "mailbox.mailbox.doctype.mailbox.mailbox.get_emails",
+			callback: function(r) {
+				if (r.message){
+					sender = me.dialog.fields_dict.sender.wrapper
+					$.each(r.message, function(value,key) {
+					  $(sender).find('select').append($("<option></option>")
+					     .attr("value", key).text(key));
+					});
+				}
+			}	
+			
+		})
 	},
 	attachments_for_compose:function(){
 		var me = this;
@@ -208,7 +225,6 @@ mailbox.Composer = Class.extend({
 	}*/,
 	send_email :function(btn, form_values, selected_attachments) {
 		var me = this;
-
 		return frappe.call({
 			method:"mailbox.mailbox.doctype.mailbox.mailbox.make",
 			args: {
@@ -238,7 +254,7 @@ mailbox.Composer = Class.extend({
 						refresh_field("tag")
 					}
 					else{
-						msgprint(__(r.message["not_valid"]));	
+						msgprint(__(r.message.not_valid));	
 					}
 					
 				} else {
