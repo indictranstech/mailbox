@@ -77,6 +77,13 @@
    "unique": 0
   }, 
   {
+   "fieldname": "recipients_name", 
+   "fieldtype": "Data", 
+   "label": "Recipients Name", 
+   "permlevel": 0, 
+   "precision": ""
+  }, 
+  {
    "allow_on_submit": 0, 
    "fieldname": "column_break_4", 
    "fieldtype": "Column Break", 
@@ -378,7 +385,7 @@
    "allow_on_submit": 0, 
    "fieldname": "user", 
    "fieldtype": "Link", 
-   "hidden": 1, 
+   "hidden": 0, 
    "ignore_user_permissions": 0, 
    "in_filter": 0, 
    "in_list_view": 0, 
@@ -476,6 +483,14 @@
    "label": "read", 
    "permlevel": 0, 
    "precision": ""
+  }, 
+  {
+   "fieldname": "communication", 
+   "fieldtype": "Data", 
+   "hidden": 1, 
+   "label": "Communication", 
+   "permlevel": 0, 
+   "precision": ""
   }
  ], 
  "hide_heading": 0, 
@@ -485,8 +500,8 @@
  "is_submittable": 0, 
  "issingle": 0, 
  "istable": 0, 
- "modified": "2015-07-28 20:25:41.291534", 
- "modified_by": "Administrator", 
+ "modified": "2015-07-29 15:34:32.917501", 
+ "modified_by": "pawaranand00@gmail.com", 
  "module": "Mailbox", 
  "name": "Mailbox", 
  "name_case": "", 

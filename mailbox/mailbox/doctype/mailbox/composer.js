@@ -24,9 +24,11 @@ mailbox.Composer = Class.extend({
 					fieldname:"subject"},
 
 				{fieldtype: "Section Break"},
-				{label:__("Customer"), fieldtype:"Data", fieldname:"customer"},
+				{label:__("Tag"), fieldtype:"Link", fieldname:"tag","options":"Tag"},
 				{fieldtype: "Column Break"},
-				{label:__("Supplier"), fieldtype:"Data", fieldname:"supplier"},
+				{label:__("Customer"), fieldtype:"Link", fieldname:"customer","options":"Customer"},
+				{fieldtype: "Column Break"},
+				{label:__("Supplier"), fieldtype:"Link", fieldname:"supplier","options":"Supplier"},
 						
 				{fieldtype: "Section Break"},
 				{label:__("Message"), fieldtype:"Text Editor", reqd: 1,
@@ -118,6 +120,22 @@ mailbox.Composer = Class.extend({
 		if(this.action == 'reply') {
 			$(this.dialog.fields_dict.recipient.input).attr('disabled',true)
 			this.recipient = this.doc.sender
+		}
+
+		if (this.action == 'reply_all'){
+			var me = this; 
+			frappe.call({
+				method:'mailbox.mailbox.doctype.mailbox.mailbox.format_cc_bcc_arrds',
+				args: {
+					doc:this.frm.doc
+				},
+				callback: function(r) {
+					if (r.message){
+						$(me.dialog.fields_dict.cc.input).val(r.message)
+					}
+					
+				}
+			 });
 		}
 		
 		if(!this.subject && this.frm) {
@@ -232,11 +250,11 @@ mailbox.Composer = Class.extend({
 				sender: form_values.sender,
 				subject: form_values.subject,
 				content: form_values.content,
-				doctype: this.doc.doctype,
-				name: this.doc.name,
+				doctype: this.doc ? this.doc.doctype:"",
+				name:  this.doc ? this.doc.name:"",
 				send_email: form_values.send_email,
 				attachments: selected_attachments,
-				email_account:me.doc.email_account,
+				email_account:me.doc ? me.doc.email_account:"",
 				doc:me.doc,
 				cc:form_values.cc,
 				bcc:form_values.bcc,
@@ -351,7 +369,7 @@ mailbox.Composer = Class.extend({
 				+ "<br><!-- original-reply --><br>"
 				+ '<blockquote>' +
 					'<p>' + __("On {0}, {1} wrote:",
-					[frappe.datetime.global_date_format(this.doc.creation) , this.doc.user]) + '</p>' +
+					[frappe.datetime.global_date_format(this.doc.creation) , this.doc.sender]) + '</p>' +
 					last_email_content +
 				'<blockquote>');
 		}

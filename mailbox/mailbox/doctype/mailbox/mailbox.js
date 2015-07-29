@@ -14,6 +14,12 @@ frappe.ui.form.on("Mailbox", "refresh", function(frm) {
 				action: "reply",
 			}) 
 		});
+		frm.add_custom_button(__("Reply All"), function() { new mailbox.Composer({
+				doc: frm.doc,
+				frm: frm,
+				action: "reply_all",
+			}) 
+		});
 		frm.add_custom_button(__("trash"), function() { 
 				var remove_btn = this;
 				frappe.confirm(__("Are you sure you want to trash the document?"),
@@ -28,7 +34,7 @@ frappe.ui.form.on("Mailbox", "refresh", function(frm) {
 	if (frm.doc.docstatus===0){
 		frappe.call({
 			method:"mailbox.mailbox.doctype.mailbox.mailbox.check_contact",
-			args:{"contact":frm.doc.sender},
+			args:{"contact":frm.doc.sender,"action":frm.doc.action},
 			callback: function(r) {
 				if (r.message){
 					msgprint(r.message)

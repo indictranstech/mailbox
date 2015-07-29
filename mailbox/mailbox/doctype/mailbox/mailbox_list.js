@@ -100,11 +100,11 @@ frappe.listview_settings["Mailbox"] = {
 	title:"tag",
 	colwidths: {"subject":3,"indicator":3,"recipients":3},
 	get_indicator: function(doc) {
-		if(doc.read) {
-			return [__(doc.tag),"green", "doc.read,=,1"]
+		if(doc.tag) {
+			return [__(doc.tag),"green", "doc.tag,!=,''"]
 		}
 		else {
-			return [__(doc.tag),"red", "doc.read,=,0"]
+			return [__(doc.tag),"red", "doc.tag,!=,''"]
 		}
 	}
 }

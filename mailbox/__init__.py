@@ -12,12 +12,13 @@ def sendmail(recipients, sender='', msg='', subject='[No Subject]', attachments=
 	mail = get_email(recipients, sender, content or msg, subject, attachments=attachments, reply_to=reply_to, cc=cc)
 	if message_id:
 		mail.set_message_id(message_id)
+		print message_id
 	send_mail(mail,sender)
 
 def send_mail(mail,sender):
 	if sender:
-		mail_config = frappe.db.get_value("Email Config",{"email_id":sender},"name")
-		server_details = frappe.get_doc("Email Config",mail_config)
+		mail_config = frappe.db.get_value("Email Account Config",{"email_id":sender},"name")
+		server_details = frappe.get_doc("Email Account Config",mail_config)
 		
 		try:
 			smtpserver = SMTPServer(login=server_details.email_id, password=server_details.password, 
