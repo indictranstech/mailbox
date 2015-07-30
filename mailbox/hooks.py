@@ -107,3 +107,8 @@ app_version = "0.0.1"
 # 	"frappe.desk.doctype.event.event.get_events": "mailbox.event.get_events"
 # }
 
+scheduler_events = {
+	"all": [
+		"mailbox.mailbox.doctype.email_account_config.email_account_config.pull"
+	]
+}
