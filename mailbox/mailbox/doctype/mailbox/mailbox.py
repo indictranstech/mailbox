@@ -280,7 +280,7 @@ def append_to_mailbox(mailbox_doc):
 		"recipients_name":recipients_name,
 		"date_time":current_time,
 		"cc": mailbox_doc["cc"],
-		"cc": mailbox_doc["bcc"],
+		"bcc": mailbox_doc["bcc"],
 		"action": action_mapper.get(mailbox_doc["action"]),
 		"email_account": mailbox_doc["email_account"],
 		"user": frappe.session.user
@@ -457,14 +457,15 @@ def format_cc_bcc_arrds(doc=None):
 	if doc:
 		doc = json.loads(doc)
 		cc_list = []
-		[cc_list.append(cc.split("<")[1]) for cc in doc["cc"].split(',')]
-		f = 0
-		emailaddr = []
-		for c in cc_list:
-			cc_a = c[:-1]
-			emailaddr.append(cc_a)
-			f = 1
-		ccs = (', ').join(emailaddr)
-		return ccs	
+		if doc.get("cc"):
+			[cc_list.append(cc.split("<")[1]) for cc in doc["cc"].split(',')]
+			f = 0
+			emailaddr = []
+			for c in cc_list:
+				cc_a = c[:-1]
+				emailaddr.append(cc_a)
+				f = 1
+			ccs = (', ').join(emailaddr)
+			return ccs	
 			
 		

@@ -7,7 +7,7 @@ frappe.listview_settings["Mailbox"] = {
 				ref_no:Math.floor(Date.now() / 1000)
 			})
 		});
-		listview.page.add_inner_button(__("sync"), function() { 
+		listview.page.add_inner_button(__("Sync"), function() { 
 			frappe.call({
 				method:"mailbox.mailbox.doctype.mailbox.mailbox.sync_for_current_user",
 				callback: function(r) {
@@ -15,7 +15,7 @@ frappe.listview_settings["Mailbox"] = {
 				}
 			});
 		});
-		listview.page.add_inner_button(__("trash"), function() { 
+		listview.page.add_inner_button(__("Trash"), function() { 
 			var me = this;
 			
 			dl = $.map($(document).find('.list-delete:checked'), function(e) {
@@ -82,7 +82,7 @@ frappe.listview_settings["Mailbox"] = {
 		listview.page.add_inner_button(__("Compose"), function() { 
 			new mailbox.Composer({})
 		});
-		listview.page.add_inner_button(__("sync"), function() { 
+		listview.page.add_inner_button(__("Sync"), function() { 
 			frappe.call({
 				method:"mailbox.mailbox.doctype.inbox.inbox.sync_for_current_user",
 				callback: function(r) {
