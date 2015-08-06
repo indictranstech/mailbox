@@ -10,8 +10,11 @@ frappe.listview_settings["Mailbox"] = {
 		listview.page.add_inner_button(__("Sync"), function() { 
 			frappe.call({
 				method:"mailbox.mailbox.doctype.mailbox.mailbox.sync_for_current_user",
+				freeze: true,
 				callback: function(r) {
-					msgprint(__("Email Synced, Please Refresh page."))
+					if (r.message){
+						msgprint(__(r.message.msg))
+					}
 				}
 			});
 		});
