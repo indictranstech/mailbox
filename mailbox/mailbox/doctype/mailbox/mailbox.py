@@ -7,7 +7,7 @@ import frappe
 from frappe.model.document import Document
 from email.utils import formataddr, parseaddr
 from frappe.utils import get_site_path, get_hook_method, get_files_path, random_string, encode, cstr,validate_email_add,get_url, scrub_urls, strip, expand_relative_urls, cint
-
+from frappe.utils import add_days, cint, cstr
 from frappe.utils.file_manager import get_file
 import frappe.email.smtp
 from frappe import _
@@ -19,6 +19,8 @@ from frappe import _
 
 class Mailbox(Document):
 	def on_update(self):
+		self.set_Sender_receiver_name()
+
 		self.attach_mail_to_customer_or_supplier()
 		
 		if self.tag and self.communication:
@@ -28,6 +30,77 @@ class Mailbox(Document):
 			if frappe.db.get_value("Communication",self.communication):
 				frappe.delete_doc("Communication",self.communication)  
 
+	def set_Sender_receiver_name(self):
+		if self.sender and not self.sender_full_name:
+			self.check_Email_contact_exist(self.sender)
+			self.fetch_name_from_email_contacts(self.sender)
+
+		if self.recipient and not self.recipients_name:
+			recipients=self.recipient.split(',')
+			if len(recipients)==1:
+				self.check_Email_contact_exist(self.recipient)
+				self.fetch_name_from_email_contacts(self.recipient)
+
+		
+	def check_Email_contact_exist(self,sender):
+
+		""" If senderid or receiver id is not present then check it is present in ERP contact
+				or Email Config records if not then create new Email Contacts Record.
+				its useful to get sender and receiver name while Forward,Reply,Reply all, Compose actions
+				in email """
+
+		if not frappe.db.get_value("Email Contacts",{"email_address":sender},"user_name"):
+			if frappe.db.get_value("Contact",{"email_id":sender},"name"):
+				first_name = frappe.db.get_value("Contact",{"email_id":sender},"first_name")
+				last_name = frappe.db.get_value("Contact",{"email_id":sender},"last_name")
+				sender_full_name= cstr(first_name) + ' ' + cstr(last_name)
+				account_type='User'
+				self.create_email_contacts(sender,sender_full_name,account_type)
+
+			elif frappe.db.get_value("Email Account Config",{"email_id":sender},"email_account_name"):
+				sender_full_name = frappe.db.get_value("Email Account Config",{"email_id":sender},"email_account_name")
+				account_type='Configured'
+				self.create_email_contacts(sender,sender_full_name,account_type)
+
+
+	def create_email_contacts(self,sender,sender_full_name,account_type):
+
+		""" Create New Email Contacts Record """
+
+		contact = frappe.new_doc('Email Contacts')
+		contact.user_name= sender_full_name
+		contact.email_address= sender
+		contact.account_type=account_type
+		contact.save(ignore_permissions=True)
+
+	def fetch_name_from_email_contacts(self,emailid):
+
+		frappe.errprint("in fetch_name_from_email_contacts")
+
+		"""If Email Contacts is existing against specified emailid 
+			then fetch full_name name gainst that emailid from Email Contacts Records """
+			
+		full_name = frappe.db.get_value("Email Contacts",{"email_address":emailid},"user_name")
+		recipients_list=self.recipient.split(',')
+		
+		if len(recipients_list)==1:
+			if self.sender == emailid:
+				self.sender_full_name=full_name
+				frappe.errprint(self.sender_full_name)
+		
+			elif self.recipient == emailid:
+				self.recipients_name=full_name
+				frappe.errprint(self.recipients_name)
+
+		else:
+			if self.sender == emailid:
+				self.sender_full_name=full_name
+
+			elif self.recipient and self.recipients_name:
+				self.recipients_name=full_name
+						
+			
+			
 
 	def update_tag_info(self):
 		related_content = """From: %(sender)s <br> To: %(recipients)s <br> Subject: %(subject)s <br> tag: %(tag)s"""%{
@@ -137,7 +210,8 @@ class Mailbox(Document):
 @frappe.whitelist()
 def make(doctype=None, name=None, content=None, subject=None, sent_or_received = "Sent",
 	sender=None, recipients=None, communication_medium="Email", send_email=False,
-	attachments='[]',email_account=None,doc=None,action=None,cc=None,bcc=None,form_values=None,ref_no=None):
+	attachments='[]',email_account=None,doc=None,action=None,cc=None,bcc=None,form_values=None,ref_no=None,
+		sender_full_name=None,recipients_name=None):
 	"""
 		called from composer
 		These Method manages craeting new mailbox document for reply/Forwarded and compose
@@ -146,6 +220,7 @@ def make(doctype=None, name=None, content=None, subject=None, sent_or_received =
 	import json
 	if doc:	
 		doc = json.loads(doc)
+
 
 	mailbox_doc = {
 		"doctype":doctype,
@@ -179,6 +254,7 @@ def make(doctype=None, name=None, content=None, subject=None, sent_or_received =
 	else:
 		attachments = prepare_attachments(attachments)
 
+	#frappe.errprint(mailbox_doc)
 		
 	mailbox = append_to_mailbox(mailbox_doc)
 	added_attachments = add_attachments(attachments,mailbox.name,mailbox_doc["action"])
@@ -259,13 +335,7 @@ def append_to_mailbox(mailbox_doc):
 	current_time = datetime.datetime.strptime(str(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')),'%Y-%m-%d %H:%M:%S')
 	recipients_name = ''
 	
-	if not mailbox_doc["action"] == 'reply':
-		recipients_name = mailbox_doc["doc"].get('sender_full_name') 
-	else:
-		recipients_name = frappe.db.get_value("Contact",{"email_id":mailbox_doc["recipients"]},"first_name")
-
-	if frappe.db.get_value("Email Account Config",{"email_id":mailbox_doc["sender"]},"email_account_name"):
-		sender_full_name = frappe.db.get_value("Email Account Config",{"email_id":mailbox_doc["sender"]},"email_account_name")
+	
 	
 	mailbox = frappe.get_doc({
 		"doctype":"Mailbox",
@@ -275,9 +345,7 @@ def append_to_mailbox(mailbox_doc):
 		"customer": mailbox_doc["form_values"].get("customer") or "",
 		"supplier": mailbox_doc["form_values"].get("supplier") or "",
 		"sender": mailbox_doc["sender"],
-		"sender_full_name":sender_full_name,
 		"recipient": mailbox_doc["recipients"],
-		"recipients_name":recipients_name,
 		"date_time":current_time,
 		"cc": mailbox_doc["cc"],
 		"bcc": mailbox_doc["bcc"],
@@ -285,8 +353,11 @@ def append_to_mailbox(mailbox_doc):
 		"email_account": mailbox_doc["email_account"],
 		"user": frappe.session.user
 	})
+
 	mailbox.insert(ignore_permissions=True)
-	 
+	mailbox.set_Sender_receiver_name()
+	mailbox.save()
+	
 	return mailbox
 
 

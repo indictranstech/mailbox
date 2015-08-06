@@ -124,18 +124,11 @@ mailbox.Composer = Class.extend({
 
 		if (this.action == 'reply_all'){
 			var me = this; 
-			frappe.call({
-				method:'mailbox.mailbox.doctype.mailbox.mailbox.format_cc_bcc_arrds',
-				args: {
-					doc:this.frm.doc
-				},
-				callback: function(r) {
-					if (r.message){
-						$(me.dialog.fields_dict.cc.input).val(r.message)
-					}
-					
-				}
-			 });
+			$(this.dialog.fields_dict.recipient.input).attr('disabled',true)
+			this.recipient = this.doc.sender
+			$(this.dialog.fields_dict.cc.input).attr('disabled',true)
+			$(me.dialog.fields_dict.cc.input).val(this.doc.cc)
+			
 		}
 		
 		if(!this.subject && this.frm) {
@@ -261,6 +254,7 @@ mailbox.Composer = Class.extend({
 				action:this.action,
 				form_values:form_values,
 				ref_no:this.ref_no,
+				
 			},
 			btn: btn,
 			callback: function(r) {
@@ -305,10 +299,10 @@ mailbox.Composer = Class.extend({
 					return frappe.call({
 						method:'frappe.email.get_contact_list',
 						args: {
-							'select': "email_id",
-							'from': "Contact",
-							'where': "email_id",
-							'txt': extractLast(request.term).value || '%'
+							'select': "email_address",
+							'from': "Email Contacts",
+							'where': "account_type",
+							'txt': 'User' || '%'
 						},
 						quiet: true,
 						callback: function(r) {
