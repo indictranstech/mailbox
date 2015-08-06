@@ -130,9 +130,10 @@ class Mailbox(Document):
 			if not frappe.db.get_value('Contact',{"customer":self.customer,"email_id":email_id},"name"):
 				self.create_contact(email_id,contact_for="Customer")
 			
-			self.append_mail_to_doc("Customer",self.customer)
+			comm = self.append_mail_to_doc("Customer",self.customer)
 			self.tagged = 1
-
+			self.communication = comm.name
+			
 		elif self.supplier and not cint(self.get("tagged")) and not self.action == 'Trash':
 			email_id = self.sender
 			if self.action == 'Forwarded' or self.action == 'Replied' or self.action == 'Outgoing':
@@ -142,8 +143,9 @@ class Mailbox(Document):
 			if not frappe.db.get_value('Contact',{"supplier":self.supplier,"email_id":email_id},"name"):
 				self.create_contact(email_id,contact_for="supplier")
 
-			self.append_mail_to_doc("Supplier",self.supplier)
+			comm = self.append_mail_to_doc("Supplier",self.supplier)
 			self.tagged = 1
+			self.communication = comm.name
 
 
 	def create_contact(self,email_id,contact_for):
@@ -174,14 +176,16 @@ class Mailbox(Document):
 			cobj = frappe.get_doc('Contact',contact_name)
 			
 			if cobj.customer:
-				self.append_mail_to_doc("Customer",cobj.customer)
+				comm = self.append_mail_to_doc("Customer",cobj.customer)
 				self.customer = cobj.customer
 				self.tagged = 1
+				self.communication = comm.name
 
 			elif cobj.supplier:
-				self.append_mail_to_doc("Supplier",cobj.supplier)
+				comm = self.append_mail_to_doc("Supplier",cobj.supplier)
 				self.supplier = cobj.supplier
 				self.tagged = 1
+				self.communication = comm.name
 
 	def append_mail_to_doc(self,doctype,docname):
 		"""Create communication doc so that these mail can be seen as comment in customer/supplier"""
@@ -205,7 +209,7 @@ class Mailbox(Document):
 			"reference_name": docname
 		})
 		comm.insert(ignore_permissions=True)
-		self.communication = comm.name
+		return comm
 
 @frappe.whitelist()
 def make(doctype=None, name=None, content=None, subject=None, sent_or_received = "Sent",
@@ -432,9 +436,13 @@ def get_tagging_details(supplier_or_customer,sender):
 
 @frappe.whitelist()
 def sync_for_current_user():
-	for email_account in frappe.get_list("Email Account Config", filters={"enabled": 1,"user":frappe.session.user}):
-		email_config = frappe.get_doc('Email Account Config',email_account)
-		email_config.receive()
+	if frappe.get_list("Email Account Config", filters={"enabled": 1,"user":frappe.session.user}):
+		for email_account in frappe.get_list("Email Account Config", filters={"enabled": 1,"user":frappe.session.user}):
+			email_config = frappe.get_doc('Email Account Config',email_account)
+			email_config.receive()
+			return {"msg":"Email Synced, Please Refresh page."}
+	else:
+		return {"msg":"Email Configration Not Done or Configuration Is Not Enabled"}
 
 @frappe.whitelist()
 def check_contact(contact=None,action=None):
