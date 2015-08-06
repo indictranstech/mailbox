@@ -66,13 +66,18 @@ app_version = "0.0.1"
 # ---------------
 # Hook on document methods and events
 
-# doc_events = {
+doc_events = {
+
+
+	"Contact": {
+		"on_update": ["mailbox.mailbox.doctype.email_contacts.email_contacts.validate_emailid", "mailbox.mailbox.doctype.email_contacts.email_contacts.validate_assigning_customers"]
+	},
 # 	"*": {
 # 		"on_update": "method",
 # 		"on_cancel": "method",
 # 		"on_trash": "method"
 #	}
-# }
+ }
 
 # Scheduled Tasks
 # ---------------

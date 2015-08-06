@@ -86,14 +86,17 @@ class EmailAccountConfig(Document):
 
 	def receive(self):
 		"""Called by scheduler to receive emails from this EMail account using POP3."""
+
 		if self.enabled:
 			pop3 = self.get_pop3()
 			incoming_mails = pop3.get_messages()
+
 			exceptions = []
-		
+			account_name = self.email_account_name
+
 			for raw in incoming_mails:
 				try:
-					self.insert_communication(raw)
+					self.insert_communication(raw,account_name)
 				except Exception:
 					frappe.db.rollback()
 					exceptions.append(frappe.get_traceback())
@@ -103,12 +106,16 @@ class EmailAccountConfig(Document):
 			if exceptions:
 				raise Exception, frappe.as_json(exceptions)
 
-	def insert_communication(self, raw):
+	def insert_communication(self, raw,account_name):
 		"""Create new doc of mailbox and append info retrived from email and the attachments against mailbox"""
 		email = Email(raw)
+
 		date = datetime.datetime.strptime(email.date,'%Y-%m-%d %H:%M:%S')
-		
-		
+		final_recipients=self.make_listof_recipients(email.mail.get("To"))
+		if email.mail.get("Cc"):
+			final_cc=self.make_listof_recipients(email.mail.get("Cc"))
+		else:
+			final_cc=''
 		mailbox = frappe.get_doc({
 			"doctype": "Mailbox",
 			"subject": email.subject,
@@ -117,8 +124,9 @@ class EmailAccountConfig(Document):
 			"sender": email.from_email,
 			"email_account": self.name,
 			"user":self.user,
-			"recipient": email.mail.get("To"),
-			"cc":email.mail.get("Cc"),
+			"recipient": final_recipients,
+			"recipients_name":account_name,
+			"cc":final_cc,
 			"date_time":date
 		})
 
@@ -128,10 +136,46 @@ class EmailAccountConfig(Document):
 		# save attachments
 		email.save_attachments_in_doc(mailbox)
 		mailbox.check_contact_exists()
-		mailbox.save()			
+		mailbox.save()		
+
+
+	def make_listof_recipients(self,emails):
+		emailid_list=[]
+		final_str=''
+		for i in emails.split(','):
+			if "<" in i:
+				ids=i.split("<")
+				emailid_list.append(ids[1][:-1])
+			else:
+				emailid_list.append(i)
+
+		final_str = ','.join(map(str, emailid_list))
+		return final_str
 	
 	def on_update(self):
+		self.check_Email_contact_exist(self.email_id)
 		self.receive()
+
+	def check_Email_contact_exist(self,sender):
+
+		""" If senderid or receiver id is not present then check it is present in ERP contact
+				or Email Config records if not then create new Email Contacts Record.
+				its useful to get sender and receiver name while Forward,Reply,Reply all, Compose actions
+				in email """
+
+		if not frappe.db.get_value("Email Contacts",{"email_address":sender},"user_name"):
+			account_type = 'Configured'
+			self.create_email_contacts(sender,self.email_account_name,account_type)
+
+	def create_email_contacts(self,sender,sender_full_name,account_type):
+
+		""" Create New Email Contacts Record """
+
+		contact = frappe.new_doc('Email Contacts')
+		contact.user_name= sender_full_name
+		contact.email_address= sender
+		contact.account_type=account_type
+		contact.save(ignore_permissions=True)			
 
 def pull():
 	"""Will be called via scheduler, pull emails from all enabled POP3 email accounts."""
