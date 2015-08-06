@@ -70,7 +70,7 @@ doc_events = {
 
 
 	"Contact": {
-		"on_update": "mailbox.mailbox.doctype.email_contacts.email_contacts.validate_emailid"
+		"on_update": ["mailbox.mailbox.doctype.email_contacts.email_contacts.validate_emailid", "mailbox.mailbox.doctype.email_contacts.email_contacts.validate_assigning_customers"]
 	},
 # 	"*": {
 # 		"on_update": "method",

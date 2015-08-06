@@ -4,6 +4,7 @@ mailbox.Composer = Class.extend({
 	init: function(opts) {
 		$.extend(this, opts);
 		this.make()
+		this.fetch_name()
 	},
 	make: function() {
 		var me = this;
@@ -52,9 +53,51 @@ mailbox.Composer = Class.extend({
 		this.prepare();
 		this.dialog.show();
 	},
+
+	fetch_name:function(){
+		var me=this;
+		$( $(this.dialog.fields_dict.recipient.input)).autocomplete({
+   			 select: function( event, ui ) {
+
+   			 	me.read_customer_supplier_name(ui.item.value) 	
+   			},
+   			change: function(event,ui){
+   				$(me.dialog.fields_dict.supplier.input).val('')
+   				me.read_customer_supplier_name($(this).val())
+   			}
+
+		});		
+	},
+
+	read_customer_supplier_name:function(emailid){
+		var me=this;
+		$(me.dialog.fields_dict.customer.input).val('')
+   		$(me.dialog.fields_dict.supplier.input).val('')
+		frappe.call({
+
+			method: "mailbox.mailbox.doctype.email_contacts.email_contacts.get_customer_supplier_name",
+			args: {
+				"email_id": emailid
+			},
+			callback: function(r) {
+				if(r.message){
+					if (r.message['customer_name'])
+						$(me.dialog.fields_dict.customer.input).val(r.message['customer_name'])
+					else
+						$(me.dialog.fields_dict.supplier.input).val(r.message['supplier_name'])
+				}
+			}						
+		});
+
+	},
+
 	prepare: function() {
 		var me = this;
 		var fields = this.dialog.fields_dict;
+
+		$(this.dialog.fields_dict.customer.input).attr('disabled',true)
+		$(this.dialog.fields_dict.supplier.input).attr('disabled',true)
+
 		if (this.action != 'compose'){
 			this.setup_subject_and_recipients();
 			this.setup_attach();

@@ -32,6 +32,7 @@ class Mailbox(Document):
 
 	def set_Sender_receiver_name(self):
 		if self.sender and not self.sender_full_name:
+	
 			self.check_Email_contact_exist(self.sender)
 			self.fetch_name_from_email_contacts(self.sender)
 
@@ -40,6 +41,11 @@ class Mailbox(Document):
 			if len(recipients)==1:
 				self.check_Email_contact_exist(self.recipient)
 				self.fetch_name_from_email_contacts(self.recipient)
+
+			else:
+				for i in recipients:
+					self.check_Email_contact_exist(i.strip())
+					self.fetch_name_from_email_contacts(i.strip())
 
 		
 	def check_Email_contact_exist(self,sender):
@@ -75,22 +81,15 @@ class Mailbox(Document):
 
 	def fetch_name_from_email_contacts(self,emailid):
 
-		frappe.errprint("in fetch_name_from_email_contacts")
-
+		# frappe.errprint("fetch_name_from_email_contacts")
 		"""If Email Contacts is existing against specified emailid 
 			then fetch full_name name gainst that emailid from Email Contacts Records """
 			
-		full_name = frappe.db.get_value("Email Contacts",{"email_address":emailid},"user_name")
 		recipients_list=self.recipient.split(',')
 		
 		if len(recipients_list)==1:
-			if self.sender == emailid:
-				self.sender_full_name=full_name
-				frappe.errprint(self.sender_full_name)
-		
-			elif self.recipient == emailid:
-				self.recipients_name=full_name
-				frappe.errprint(self.recipients_name)
+			self.sender_full_name = frappe.db.get_value("Email Contacts",{"email_address":self.sender},"user_name")
+			self.recipients_name = frappe.db.get_value("Email Contacts",{"email_address":self.recipient},"user_name")
 
 		else:
 			if self.sender == emailid:
@@ -338,8 +337,8 @@ def append_to_mailbox(mailbox_doc):
 	import datetime
 	current_time = datetime.datetime.strptime(str(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')),'%Y-%m-%d %H:%M:%S')
 	recipients_name = ''
-	
-	
+	if not mailbox_doc["email_account"] and mailbox_doc["action"] == 'compose':
+		mailbox_doc["email_account"] = frappe.db.get_value("Email Account Config",{"email_id":mailbox_doc["sender"]},"name")
 	
 	mailbox = frappe.get_doc({
 		"doctype":"Mailbox",
@@ -436,6 +435,7 @@ def get_tagging_details(supplier_or_customer,sender):
 
 @frappe.whitelist()
 def sync_for_current_user():
+
 	if frappe.get_list("Email Account Config", filters={"enabled": 1,"user":frappe.session.user}):
 		for email_account in frappe.get_list("Email Account Config", filters={"enabled": 1,"user":frappe.session.user}):
 			email_config = frappe.get_doc('Email Account Config',email_account)

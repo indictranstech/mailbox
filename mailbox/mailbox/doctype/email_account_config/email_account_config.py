@@ -86,11 +86,13 @@ class EmailAccountConfig(Document):
 
 	def receive(self):
 		"""Called by scheduler to receive emails from this EMail account using POP3."""
+
 		if self.enabled:
 			pop3 = self.get_pop3()
 			incoming_mails = pop3.get_messages()
+
 			exceptions = []
-			account_name=self.email_account_name
+			account_name = self.email_account_name
 
 			for raw in incoming_mails:
 				try:
