@@ -43,9 +43,9 @@ class Mailbox(Document):
 				self.fetch_name_from_email_contacts(self.recipient)
 
 			else:
-				for i in recipients:
-					self.check_Email_contact_exist(i.strip())
-					self.fetch_name_from_email_contacts(i.strip())
+				email_id=frappe.db.get_value("Email Account Config",{"email_account_name":self.email_account},"email_id")
+				self.check_Email_contact_exist(email_id)
+				self.fetch_name_from_email_contacts(email_id)
 
 		
 	def check_Email_contact_exist(self,sender):
@@ -84,21 +84,11 @@ class Mailbox(Document):
 		# frappe.errprint("fetch_name_from_email_contacts")
 		"""If Email Contacts is existing against specified emailid 
 			then fetch full_name name gainst that emailid from Email Contacts Records """
-			
-		recipients_list=self.recipient.split(',')
-		
+
+		recipients_list = self.recipient.split(',')
 		if len(recipients_list)==1:
 			self.sender_full_name = frappe.db.get_value("Email Contacts",{"email_address":self.sender},"user_name")
 			self.recipients_name = frappe.db.get_value("Email Contacts",{"email_address":self.recipient},"user_name")
-
-		else:
-			if self.sender == emailid:
-				self.sender_full_name=full_name
-
-			elif self.recipient and self.recipients_name:
-				self.recipients_name=full_name
-						
-			
 			
 
 	def update_tag_info(self):
