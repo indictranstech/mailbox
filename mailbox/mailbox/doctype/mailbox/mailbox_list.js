@@ -102,6 +102,7 @@ frappe.listview_settings["Mailbox"] = {
 	add_fields: ["read","action"],
 	title:"tag",
 	colwidths: {"subject":3,"indicator":3,"recipients":3},
+	filters: [["action", "=", "Incoming"]],
 	get_indicator: function(doc) {
 		if(doc.tag) {
 			return [__(doc.tag),"green", "doc.tag,!=,''"]

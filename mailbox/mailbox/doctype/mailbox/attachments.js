@@ -8,6 +8,8 @@ frappe.ui.form.Attachment = Class.extend({
 		$.extend(this, opts);
 		this.make();
 		this.dialog_attachments=[]
+		this.new_dialog=[]
+		this.final_dialog=[]
 	},
 	make: function() {
 		var me = this;
@@ -35,10 +37,11 @@ frappe.ui.form.Attachment = Class.extend({
 
 	},
 	get_attachments: function() {
-		return this.dialog_attachments	
+		return this.dialog_attachments
 
 	},
 	add_attachment: function(attachment) {
+
 		var file_name = attachment.file_name;
 		var file_url = this.get_file_url(attachment);
 		var fileid = attachment.name;
@@ -47,19 +50,21 @@ frappe.ui.form.Attachment = Class.extend({
 		}
 
 		var me = this;
+
 		var $attach = $(repl('<li class="attachment-row">\
-				<a class="close" data-owner="%(owner)s">&times;</a>\
 				<a href="%(file_url)s" target="_blank" title="%(file_name)s" \
 					class="text-ellipsis" style="max-width: calc(100% - 43px);">\
-					<span>%(file_name)s</span></a>\
+					<span>%(file_name)s</span></a><a class="attachment_close" style="float:"";padding-left:1px" data-owner="%(owner)s">×</a>\
 			</li>', {
 				file_name: file_name,
 				file_url: frappe.urllib.get_full_url(file_url)
 			}))
 			.insertAfter(this.attachments_label.addClass("has-attachments"));
 
+		$(".attachment_close").css({"font-size":"15px","padding-left":"10px","font-weight":"bold",
+									"line-height": "1","color": "#000","opacity":"2"})
 		var $close =
-			$attach.find(".close")
+			$attach.find(".attachment_close")
 			.data("fileid", fileid)
 			.click(function() {
 				var remove_btn = this;
@@ -71,11 +76,9 @@ frappe.ui.form.Attachment = Class.extend({
 				return false
 			});
 
-		if(!frappe.model.can_write(this.frm.doctype, this.frm.name)) {
-			$close.remove();
-		}
 	},
 	get_file_url: function(attachment) {
+		
 		var file_url = attachment.file_url;
 		if (!file_url) {
 			if (attachment.file_name.indexOf('files/') === 0) {
@@ -109,11 +112,11 @@ frappe.ui.form.Attachment = Class.extend({
 
 		var me = this;
 		return frappe.call({
-			method: 'frappe.desk.form.utils.remove_attach',
+			method: 'mailbox.mailbox.doctype.mailbox.upload.remove_attach',
 			args: {
 				fid: fileid,
-				dt: me.frm.doctype,
-				dn: me.frm.docname
+				dt: 'Compose',
+				dn: fileid
 			},
 			callback: function(r,rt) {
 				if(r.exc) {
@@ -122,8 +125,6 @@ frappe.ui.form.Attachment = Class.extend({
 					return;
 				}
 				me.remove_fileid(fileid);
-				me.frm.get_docinfo().comments.push(r.message);
-				me.frm.comments.refresh();
 				if (callback) callback();
 			}
 		});
@@ -144,6 +145,7 @@ frappe.ui.form.Attachment = Class.extend({
 			args: this.get_args(),
 			callback: function(attachment, r) {
 				me.attachment_uploaded(attachment, r);
+				
 			},
 			onerror: function() {
 				me.dialog.hide();
@@ -187,12 +189,13 @@ frappe.ui.form.Attachment = Class.extend({
 	remove_fileid: function(fileid) {
 		var attachments = this.get_attachments();
 		var new_attachments = [];
+
 		$.each(attachments, function(i, attachment) {
 			if(attachment.name!=fileid) {
 				new_attachments.push(attachment);
 			}
 		});
-		this.frm.get_docinfo().attachments = new_attachments;
+		this.dialog_attachments = new_attachments;
 		this.refresh();
 	}
 });
