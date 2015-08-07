@@ -14,7 +14,7 @@ app_version = "0.0.1"
 # ------------------
 
 # include js, css files in header of desk.html
-# app_include_css = "/assets/mailbox/css/mailbox.css"
+#app_include_css = "mailbox/mailbox/doctype/mailbox/attachment_close.css"
 # app_include_js = "/assets/mailbox/js/mailbox.js"
 
 # include js, css files in header of web template

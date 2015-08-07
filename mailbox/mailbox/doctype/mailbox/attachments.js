@@ -52,19 +52,19 @@ frappe.ui.form.Attachment = Class.extend({
 		var me = this;
 
 		var $attach = $(repl('<li class="attachment-row">\
-				<a class="close" data-owner="%(owner)s">×</a>\
 				<a href="%(file_url)s" target="_blank" title="%(file_name)s" \
 					class="text-ellipsis" style="max-width: calc(100% - 43px);">\
-					<span>%(file_name)s</span></a>\
+					<span>%(file_name)s</span></a><a class="attachment_close" style="float:"";padding-left:1px" data-owner="%(owner)s">×</a>\
 			</li>', {
 				file_name: file_name,
 				file_url: frappe.urllib.get_full_url(file_url)
 			}))
 			.insertAfter(this.attachments_label.addClass("has-attachments"));
 
-		
+		$(".attachment_close").css({"font-size":"15px","padding-left":"10px","font-weight":"bold",
+									"line-height": "1","color": "#000","opacity":"2"})
 		var $close =
-			$attach.find(".close")
+			$attach.find(".attachment_close")
 			.data("fileid", fileid)
 			.click(function() {
 				var remove_btn = this;
@@ -78,7 +78,7 @@ frappe.ui.form.Attachment = Class.extend({
 
 	},
 	get_file_url: function(attachment) {
-		console.log(["sa",attachment])
+		
 		var file_url = attachment.file_url;
 		if (!file_url) {
 			if (attachment.file_name.indexOf('files/') === 0) {
