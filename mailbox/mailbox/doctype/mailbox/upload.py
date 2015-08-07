@@ -15,6 +15,7 @@ def upload():
 	file_url = frappe.form_dict.file_url
 	filename = frappe.form_dict.filename
 	ref_no = frappe.form_dict.ref_no
+	
 
 	if not filename and not file_url:
 		frappe.msgprint(_("Please select a file or url"),
@@ -24,7 +25,7 @@ def upload():
 	if filename:
 		filedata = save_uploaded(ref_no)
 	elif file_url:
-		filedata = save_url(file_url_no)
+		filedata = save_url(file_url,ref_no)
 
 	return {
 		"name": filedata.name,
@@ -156,26 +157,6 @@ def remove_file_by_url(file_url, doctype=None, name=None):
 	if fid:
 		return remove_file(fid)
 
-def remove_file(fid, attached_to_doctype=None, attached_to_name=None):
-	"""Remove file and File Data entry"""
-	file_name = None
-	if not (attached_to_doctype and attached_to_name):
-		attached = frappe.db.get_value("File Data", fid,
-			["attached_to_doctype", "attached_to_name", "file_name"])
-		if attached:
-			attached_to_doctype, attached_to_name, file_name = attached
-
-	ignore_permissions, comment = False, None
-	if attached_to_doctype and attached_to_name:
-		doc = frappe.get_doc(attached_to_doctype, attached_to_name)
-		ignore_permissions = doc.has_permission("write") or False
-		if not file_name:
-			file_name = frappe.db.get_value("File Data", fid, "file_name")
-		comment = doc.add_comment("Attachment Removed", _("Removed {0}").format(file_name))
-
-	frappe.delete_doc("File Data", fid, ignore_permissions=ignore_permissions)
-
-	return comment
 
 def delete_file_data_content(doc):
 	method = get_hook_method('delete_file_data_content', fallback=delete_file_from_filesystem)
@@ -232,5 +213,27 @@ def get_file_name(fname, optional_suffix):
 
 @frappe.whitelist()
 def get_attachments(ref_no):
-	return frappe.get_all("Compose", fields=["file_name"],
+	return frappe.get_all("Compose", fields=["file_name","name"],
 		filters = {"ref_no": ref_no})	
+
+
+@frappe.whitelist()
+def remove_attach():
+	"""remove attachment"""
+	import frappe.utils.file_manager
+	fid = frappe.form_dict.get('fid')
+	return remove_file(fid)
+
+def remove_file(fid, attached_to_doctype=None, attached_to_name=None):
+	"""Remove file and File Data entry"""
+	file_name = None
+	attached = frappe.db.get_value("Compose", fid,"file_name")
+	if attached:
+		file_name = attached
+	ignore_permissions, comment = False, None
+	doc = frappe.get_doc("Compose", fid)
+	ignore_permissions = doc.has_permission("write") or False
+	if not file_name:
+		file_name = frappe.db.get_value("Compose", fid, "file_name")
+
+	frappe.delete_doc("Compose", fid, ignore_permissions=True)

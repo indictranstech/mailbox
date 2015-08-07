@@ -162,13 +162,17 @@ mailbox.Composer = Class.extend({
 
 		if(this.action == 'reply') {
 			$(this.dialog.fields_dict.recipient.input).attr('disabled',true)
-			this.recipient = this.doc.sender
+			this.recipient = this.doc.sender;
+			$(this.dialog.fields_dict.customer.input).val(this.doc.customer)
+			$(this.dialog.fields_dict.supplier.input).val(this.doc.supplier)
 		}
 
 		if (this.action == 'reply_all'){
 			var me = this; 
 			$(this.dialog.fields_dict.recipient.input).attr('disabled',true)
-			this.recipient = this.doc.sender
+			this.recipient = this.doc.sender;
+			$(this.dialog.fields_dict.customer.input).val(this.doc.customer)
+			$(this.dialog.fields_dict.supplier.input).val(this.doc.supplier)
 			$(this.dialog.fields_dict.cc.input).attr('disabled',true)
 			$(me.dialog.fields_dict.cc.input).val(this.doc.cc)
 			
@@ -180,6 +184,7 @@ mailbox.Composer = Class.extend({
 				this.subject = this.doc.subject;
 				if(!this.recipient) {
 					this.recipient = this.doc.sender;
+
 				}
 				// prepend "Re:"
 				if(strip(this.subject.toLowerCase().split(":")[0])!="re") {
@@ -243,40 +248,7 @@ mailbox.Composer = Class.extend({
 			})
 			me.send_email(btn, form_values, selected_attachments);	
 		}
-		//}
-	}/*,
-	send_new_email: function(btn, form_values, selected_attachments) {
-		var me = this;
-		return frappe.call({
-			method:"mailbox.mailbox.doctype.mailbox.mailbox.make",
-			args: {
-				recipients: form_values.recipient,
-				subject: form_values.subject,
-				content: form_values.content,
-				send_email: form_values.send_email,
-				ref_no:this.ref_no,
-				action:this.action,
-				cc:form_values.cc,
-				bcc:form_values.bcc,
-				form_values:form_values
-			},
-			btn: btn,
-			callback: function(r) {
-				if(!r.exc) {
-					if (!r.message.not_valid){
-						if(form_values.send_email && r.message["recipients"])
-							msgprint(__("Email sent to {0}", [r.message["recipients"]]));
-						me.dialog.hide();
-					}
-					else{
-						msgprint(__("Recipients Not Valid"));	
-					}	
-				} else {
-					msgprint(__("There were errors while sending email. Please try again."));
-				}
-			}
-		});
-	}*/,
+	},
 	send_email :function(btn, form_values, selected_attachments) {
 		var me = this;
 		return frappe.call({

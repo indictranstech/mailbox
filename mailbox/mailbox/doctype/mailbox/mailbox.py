@@ -246,8 +246,6 @@ def make(doctype=None, name=None, content=None, subject=None, sent_or_received =
 		attachments = get_attachments(ref_no)
 	else:
 		attachments = prepare_attachments(attachments)
-
-	#frappe.errprint(mailbox_doc)
 		
 	mailbox = append_to_mailbox(mailbox_doc)
 	added_attachments = add_attachments(attachments,mailbox.name,mailbox_doc["action"])
