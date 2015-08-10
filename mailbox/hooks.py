@@ -65,6 +65,7 @@ app_version = "0.0.1"
 # Document Events
 # ---------------
 # Hook on document methods and events
+fixtures = ["Tag"]
 
 doc_events = {
 
