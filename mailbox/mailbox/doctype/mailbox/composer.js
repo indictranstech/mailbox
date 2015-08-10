@@ -176,21 +176,27 @@ mailbox.Composer = Class.extend({
 			$(this.dialog.fields_dict.cc.input).attr('disabled',true)
 			$(me.dialog.fields_dict.cc.input).val(this.doc.cc)
 			
+			
 		}
 		
 		if(!this.subject && this.frm) {
 			// get subject from last communication
 			if(this.action == 'reply') {
 				this.subject = this.doc.subject;
-				if(!this.recipient) {
-					this.recipient = this.doc.sender;
-
-				}
 				// prepend "Re:"
 				if(strip(this.subject.toLowerCase().split(":")[0])!="re") {
 					this.subject = "Re: " + this.subject;
 				}
 			}
+
+			if(this.action == 'reply_all') {
+				this.subject = this.doc.subject;
+				// prepend "Re:"
+				if(strip(this.subject.toLowerCase().split(":")[0])!="re") {
+					this.subject = "Re: " + this.subject;
+				}
+			}
+
 			if(this.action == 'forward') {
 				this.subject = this.doc.subject;
 				// prepend "Fwd:"
@@ -199,9 +205,6 @@ mailbox.Composer = Class.extend({
 				}
 			}
 
-			if (!this.subject) {
-				this.subject = __(this.frm.doctype) + ': ' + this.frm.docname;
-			}
 		}
 	},
 	setup_attach :function() {
