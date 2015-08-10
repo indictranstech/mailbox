@@ -183,18 +183,17 @@ mailbox.Composer = Class.extend({
 		this.recipients = "";
 
 		if(this.action == 'reply') {
+
 			$(this.dialog.fields_dict.recipient.input).attr('disabled',true)
 			this.recipient = this.doc.sender;
-			$(this.dialog.fields_dict.customer.input).val(this.doc.customer)
-			$(this.dialog.fields_dict.supplier.input).val(this.doc.supplier)
+			this.read_customer_supplier_name(this.doc.sender)
 		}
 
 		if (this.action == 'reply_all'){
 			var me = this; 
 			$(this.dialog.fields_dict.recipient.input).attr('disabled',true)
 			this.recipient = this.doc.sender;
-			$(this.dialog.fields_dict.customer.input).val(this.doc.customer)
-			$(this.dialog.fields_dict.supplier.input).val(this.doc.supplier)
+			this.read_customer_supplier_name(this.doc.sender)
 			$(this.dialog.fields_dict.cc.input).attr('disabled',true)
 			$(me.dialog.fields_dict.cc.input).val(this.doc.cc)
 			
