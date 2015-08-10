@@ -11,8 +11,7 @@ class EmailContacts(Document):
 
 def validate_emailid(doc,method):
 	if frappe.db.sql(""" select name from `tabContact` where name!='%s' and email_id='%s' """%(doc.name,doc.email_id)):
-		doc.email_id=None
-		frappe.msgprint("Specified Emailid is already assigned for another contacts"%doc.email_id,raise_exception=1)
+		frappe.msgprint("Specified Emailid '%s' is already assigned for another contacts"%doc.email_id,raise_exception=1)
 
 
 def validate_assigning_customers(doc,method):
@@ -34,9 +33,4 @@ def get_customer_supplier_name(email_id=None):
 		"supplier_name":supplier_name
 		}
 
-@frappe.whitelist()
-def get_mail_notification_count(doctype=None):
-	frappe.errprint(doctype)
-	count = frappe.db.sql("""select count(name) from `tabMailbox` where tag !='None'""",as_list=1,debug=1)
-	frappe.errprint(count)
-	return count
+
