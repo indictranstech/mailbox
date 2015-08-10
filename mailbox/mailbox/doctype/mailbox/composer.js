@@ -3,8 +3,30 @@ frappe.provide("mailbox")
 mailbox.Composer = Class.extend({
 	init: function(opts) {
 		$.extend(this, opts);
-		this.make()
-		this.fetch_name()
+		if (this.action == 'compose'){
+			this.validate_email_acc_exists()
+		}
+		else{
+			this.make()
+			
+		}
+	},
+	validate_email_acc_exists:function(){
+		var me = this
+		frappe.call({
+			method:"mailbox.mailbox.doctype.mailbox.mailbox.validate",
+			callback: function(r) {
+				this.default_available = r.message.default
+				if (this.default_available){
+					me.make();	
+					me.fetch_name()
+				}
+				else{
+					frappe.msgprint("Please Setup Default Account for Sending Mails(GOTO : Mailbox > Email Account Config)")
+					return 		
+				}
+			}
+		});
 	},
 	make: function() {
 		var me = this;
