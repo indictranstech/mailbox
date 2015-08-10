@@ -175,6 +175,7 @@ mailbox.Composer = Class.extend({
 			$(this.dialog.fields_dict.supplier.input).val(this.doc.supplier)
 			$(this.dialog.fields_dict.cc.input).attr('disabled',true)
 			$(me.dialog.fields_dict.cc.input).val(this.doc.cc)
+			this.subject = this.doc.subject;
 			
 		}
 		
