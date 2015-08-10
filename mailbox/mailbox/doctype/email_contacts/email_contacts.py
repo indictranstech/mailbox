@@ -11,7 +11,6 @@ class EmailContacts(Document):
 
 def validate_emailid(doc,method):
 	if frappe.db.sql(""" select name from `tabContact` where name!='%s' and email_id='%s' """%(doc.name,doc.email_id)):
-		doc.email_id=None
 		frappe.msgprint("Specified Emailid '%s' is already assigned for another contacts"%doc.email_id,raise_exception=1)
 
 
@@ -33,3 +32,5 @@ def get_customer_supplier_name(email_id=None):
 		return {
 		"supplier_name":supplier_name
 		}
+
+
