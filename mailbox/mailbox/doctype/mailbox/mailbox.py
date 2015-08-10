@@ -116,7 +116,7 @@ class Mailbox(Document):
 			if self.action == 'Forwarded' or self.action == 'Replied' or self.action == 'Outgoing':
 				email_id = self.recipient
 
-			if not frappe.db.get_value('Contact',{"customer":self.customer,"email_id":email_id},"name"):
+			if not frappe.db.get_value('Contact',{"email_id":email_id},"name"):
 				self.create_contact(email_id,contact_for="Customer")
 			
 			comm = self.append_mail_to_doc("Customer",self.customer)
@@ -129,7 +129,7 @@ class Mailbox(Document):
 				email_id = self.recipient
 
 
-			if not frappe.db.get_value('Contact',{"supplier":self.supplier,"email_id":email_id},"name"):
+			if not frappe.db.get_value('Contact',{"email_id":email_id},"name"):
 				self.create_contact(email_id,contact_for="supplier")
 
 			comm = self.append_mail_to_doc("Supplier",self.supplier)
