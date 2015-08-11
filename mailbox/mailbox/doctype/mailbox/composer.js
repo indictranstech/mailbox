@@ -8,6 +8,7 @@ mailbox.Composer = Class.extend({
 		}
 		else{
 			this.make()
+
 			
 		}
 	},
@@ -19,7 +20,7 @@ mailbox.Composer = Class.extend({
 				this.default_available = r.message.default
 				if (this.default_available){
 					me.make();	
-					me.fetch_name()
+					
 				}
 				else{
 					frappe.msgprint("Please Setup Default Account for Sending Mails(GOTO : Mailbox > Email Account Config)")
@@ -74,6 +75,7 @@ mailbox.Composer = Class.extend({
 
 		this.prepare();
 		this.dialog.show();
+
 	},
 
 	fetch_name:function(){
@@ -136,6 +138,7 @@ mailbox.Composer = Class.extend({
 		this.setup_hide_unhide();
 		$(this.dialog.fields_dict.recipient.input).val(this.recipient || "").change();
 		$(this.dialog.fields_dict.subject.input).val(this.subject || "").change();
+		this.fetch_name()
 	},
 	setup_link:function(){
 		var me = this;
@@ -194,6 +197,7 @@ mailbox.Composer = Class.extend({
 			$(this.dialog.fields_dict.recipient.input).attr('disabled',true)
 			this.recipient = this.doc.sender;
 			this.read_customer_supplier_name(this.doc.sender)
+			
 			$(this.dialog.fields_dict.cc.input).attr('disabled',true)
 			$(me.dialog.fields_dict.cc.input).val(this.doc.cc)
 			

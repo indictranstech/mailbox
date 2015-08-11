@@ -321,7 +321,7 @@ def send_mail(mailbox_doc,attachments):
 
 
 def append_to_mailbox(mailbox_doc):
-	action_mapper = {"compose":"Outgoing","reply":"Replied","forward":"Forwarded"}
+	action_mapper = {"compose":"Outgoing","reply":"Replied","reply_all":"Replied","forward":"Forwarded"}
 	import datetime
 	current_time = datetime.datetime.strptime(str(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')),'%Y-%m-%d %H:%M:%S')
 	recipients_name = ''
