@@ -536,3 +536,10 @@ def format_cc_bcc_arrds(doc=None):
 			return ccs	
 			
 		
+@frappe.whitelist()
+def validate():
+	if not frappe.db.get_value("Email Account Config",
+		{"user":frappe.session.user},"name"):
+		return {"default":False}
+	else:
+		return {"default":True}

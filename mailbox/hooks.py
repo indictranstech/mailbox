@@ -65,6 +65,7 @@ notification_config = "mailbox.startup.notifications.get_notification_config"
 # Document Events
 # ---------------
 # Hook on document methods and events
+fixtures = ["Tag"]
 
 doc_events = {
 
