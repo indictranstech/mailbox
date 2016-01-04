@@ -16,6 +16,7 @@ from frappe.utils import get_sites
 from frappe.email.email_body import get_email
 from frappe.email.smtp import SMTPServer
 import smtplib
+from mailbox.mailbox.recieve import IMAPServer
 from frappe import _
 
 
@@ -34,7 +35,7 @@ class EmailAccountConfig(Document):
 			self.validate_duplicate_emailid_config()
 
 		if self.enabled:
-			self.get_pop3()
+			self.get_imap()
 			self.check_smtp()
 
 	def validate_duplicate_emailid_config(self):
@@ -63,33 +64,34 @@ class EmailAccountConfig(Document):
 		)
 		server.sess
 
-	def get_pop3(self):
+	def get_imap(self):
 		"""Returns logged in POP3 connection object."""
 		
 		args = {
-			"host": self.pop3_server,
+			"host": self.imap_server,
 			"use_ssl": self.use_ssl,
 			"username": self.email_id,
 			"password": self.password
 		}
 
-		if not self.pop3_server:
+		if not self.imap_server:
 			frappe.throw(_("{0} is required").format("POP3 Server"))
 
-		pop3 = POP3Server(frappe._dict(args))
+		imap = IMAPServer(frappe._dict(args))
 		try:
-			pop3.connect()
+			imap.connect()
 		except error_proto, e:
 			frappe.throw(e.message)
 
-		return pop3
+		return imap
 
 	def receive(self):
-		"""Called by scheduler to receive emails from this EMail account using POP3."""
+		"""Called by scheduler to receive emails from this EMail account using imap."""
 
 		if self.enabled:
-			pop3 = self.get_pop3()
-			incoming_mails = pop3.get_messages()
+			imap = self.get_imap()
+			incoming_mails = imap.get_messages()
+			print incoming_mails
 
 			exceptions = []
 			account_name = self.email_account_name
