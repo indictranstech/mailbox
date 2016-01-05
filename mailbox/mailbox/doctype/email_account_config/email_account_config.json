@@ -156,7 +156,7 @@
   }, 
   {
    "allow_on_submit": 0, 
-   "default": "bh-31.webhostbox.net", 
+   "default": "md-in-44.webhostbox.net", 
    "depends_on": "", 
    "description": "e.g. pop.gmail.com", 
    "fieldname": "imap_server", 
@@ -318,7 +318,7 @@
  "is_submittable": 0, 
  "issingle": 0, 
  "istable": 0, 
- "modified": "2015-11-19 17:32:08.533324", 
+ "modified": "2016-01-04 17:32:08.533324", 
  "modified_by": "Administrator", 
  "module": "Mailbox", 
  "name": "Email Account Config", 
