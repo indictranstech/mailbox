@@ -428,7 +428,7 @@ def sync_for_current_user():
 		for email_account in frappe.get_list("Email Account Config", filters={"enabled": 1,"user":frappe.session.user}):
 			email_config = frappe.get_doc('Email Account Config',email_account)
 			email_config.receive()
-			return {"msg":"Email Synced, Please Refresh page."}
+		return {"msg":"Email Synced, Please Refresh page."}
 	else:
 		return {"msg":"Email Configration Not Done or Configuration Is Not Enabled"}
 
